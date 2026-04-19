@@ -17,8 +17,7 @@ export default function Page() {
       } else {
         setEmail(data.user.email ?? null)
 
-        // 🔥 якщо хочеш авто-перекид — розкоментуй
-        // router.push('/chat')
+        
       }
     }
 
@@ -38,7 +37,7 @@ export default function Page() {
 
       <br />
 
-      {/* 🔥 ОСНОВНЕ — КНОПКА В ЧАТ */}
+      {/*  ОСНОВНЕ — КНОПКА В ЧАТ */}
       <button onClick={() => router.push('/chat')}>
         Перейти в чат 💬
       </button>

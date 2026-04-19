@@ -13,7 +13,7 @@ export default function ChatPage() {
 
   const bottomRef = useRef<HTMLDivElement | null>(null)
 
-  // 🔥 INIT
+
   useEffect(() => {
     const init = async () => {
       const { data } = await supabase.auth.getUser()
@@ -30,7 +30,7 @@ export default function ChatPage() {
 
       let currentChatId = chatsData?.[0]?.id
 
-      // 🔥 якщо нема — створюємо чат З ПЕРЕВІРКОЮ
+      
       if (!currentChatId) {
         const { data: newChat, error } = await supabase
           .from('chats')
@@ -85,7 +85,7 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // 🔥 SELECT CHAT
+  
   const selectChat = async (id: string) => {
     setChatId(id)
 
@@ -98,7 +98,7 @@ export default function ChatPage() {
     setMessages(msgs || [])
   }
 
-  // 🔥 NEW CHAT
+  
   const createNewChat = async () => {
     if (!userId) return
 
@@ -137,7 +137,7 @@ export default function ChatPage() {
     setChats(chatsData || [])
   }
 
-  // 🔥 SEND
+  
   async function sendMessage() {
     console.log('DATA:', { message, userId, chatId })
 

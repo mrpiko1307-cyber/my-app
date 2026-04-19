@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       )
     }
 
-    // 🔥 отримуємо system prompt чату
+    
     const { data: chat } = await supabase
       .from('chats')
       .select('system_prompt')
@@ -42,7 +42,6 @@ export async function POST(req: Request) {
       throw new Error('DB ERROR')
     }
 
-    // 🔥 ІМІТАЦІЯ AI З УРАХУВАННЯМ system prompt
     const reply = `🤖 (${systemPrompt}) відповідає: "${message}"`
 
     // 🔹 зберігаємо відповідь AI
