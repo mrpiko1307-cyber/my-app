@@ -9,13 +9,26 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // 🔥 отримуємо дані
     const { message, user_id, chat_id } = await req.json()
 
-    console.log('DATA:', message, user_id, chat_id)
+    if (!message || !user_id || !chat_id) {
+      return Response.json(
+        { reply: '❌ Невірні дані' },
+        { status: 400 }
+      )
+    }
 
-    // 🔹 зберігаємо повідомлення користувача
-    await supabase.from('messages').insert([
+    // 🔥 отримуємо system prompt чату
+    const { data: chat } = await supabase
+      .from('chats')
+      .select('system_prompt')
+      .eq('id', chat_id)
+      .single()
+
+    const systemPrompt = chat?.system_prompt || 'Звичайний чат'
+
+    // 🔹 зберігаємо повідомлення юзера
+    const { error: userError } = await supabase.from('messages').insert([
       {
         user_id,
         chat_id,
@@ -24,11 +37,16 @@ export async function POST(req: Request) {
       },
     ])
 
-    // 🔥 фейкова відповідь (працює без OpenAI)
-    const reply = `Ти написав: "${message}" 🤖`
+    if (userError) {
+      console.error(userError)
+      throw new Error('DB ERROR')
+    }
+
+    // 🔥 ІМІТАЦІЯ AI З УРАХУВАННЯМ system prompt
+    const reply = `🤖 (${systemPrompt}) відповідає: "${message}"`
 
     // 🔹 зберігаємо відповідь AI
-    await supabase.from('messages').insert([
+    const { error: botError } = await supabase.from('messages').insert([
       {
         user_id,
         chat_id,
@@ -37,12 +55,18 @@ export async function POST(req: Request) {
       },
     ])
 
+    if (botError) {
+      console.error(botError)
+      throw new Error('DB ERROR')
+    }
+
     return Response.json({ reply })
   } catch (err: any) {
     console.error('SERVER ERROR:', err)
 
-    return Response.json({
-      reply: '❌ Помилка сервера',
-    })
+    return Response.json(
+      { reply: '❌ Помилка сервера' },
+      { status: 500 }
+    )
   }
 }

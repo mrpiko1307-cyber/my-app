@@ -10,8 +10,21 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
+  const [loading, setLoading] = useState(false)
 
   async function handleLogin() {
+    if (!email || !password) {
+      setMessage('❌ Введи email і пароль')
+      return
+    }
+
+    if (!email.includes('@')) {
+      setMessage('❌ Невірний email')
+      return
+    }
+
+    setLoading(true)
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -22,13 +35,16 @@ export default function LoginPage() {
     } else {
       setMessage('Успішний вхід! 🚀')
 
-  
-      router.push('/dashboard')
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 500)
     }
+
+    setLoading(false)
   }
 
   return (
-    <div style={{ padding: 20 }}>
+    <div style={{ padding: 20, maxWidth: 400, margin: '0 auto' }}>
       <h1>Login</h1>
 
       <input
@@ -36,6 +52,8 @@ export default function LoginPage() {
         placeholder="Email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+        style={{ width: '100%', padding: 8 }}
       />
 
       <br /><br />
@@ -45,11 +63,19 @@ export default function LoginPage() {
         placeholder="Password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+        style={{ width: '100%', padding: 8 }}
       />
 
       <br /><br />
 
-      <button onClick={handleLogin}>Login</button>
+      <button
+        onClick={handleLogin}
+        disabled={loading}
+        style={{ width: '100%', padding: 10 }}
+      >
+        {loading ? 'Loading...' : 'Login'}
+      </button>
 
       <p>{message}</p>
     </div>

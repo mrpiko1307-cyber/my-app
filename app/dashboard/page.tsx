@@ -13,10 +13,12 @@ export default function Page() {
       const { data } = await supabase.auth.getUser()
 
       if (!data.user) {
-        // ❗ якщо не залогінений — кидає на login
         router.push('/login')
       } else {
         setEmail(data.user.email ?? null)
+
+        // 🔥 якщо хочеш авто-перекид — розкоментуй
+        // router.push('/chat')
       }
     }
 
@@ -35,6 +37,13 @@ export default function Page() {
       <p>Привіт, {email}</p>
 
       <br />
+
+      {/* 🔥 ОСНОВНЕ — КНОПКА В ЧАТ */}
+      <button onClick={() => router.push('/chat')}>
+        Перейти в чат 💬
+      </button>
+
+      <br /><br />
 
       <button onClick={handleLogout}>
         Вийти

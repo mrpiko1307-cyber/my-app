@@ -34,7 +34,13 @@ export default function ChatPage() {
       if (!currentChatId) {
         const { data: newChat } = await supabase
           .from('chats')
-          .insert([{ user_id: uid, title: 'Новий чат' }])
+          .insert([
+            {
+              user_id: uid,
+              title: 'Новий чат',
+              system_prompt: 'Звичайний чат',
+            },
+          ])
           .select()
           .single()
 
@@ -49,6 +55,7 @@ export default function ChatPage() {
           .select('*')
           .eq('chat_id', currentChatId)
           .order('created_at', { ascending: true })
+          .limit(20)
 
         setMessages(msgs || [])
       }
@@ -69,6 +76,7 @@ export default function ChatPage() {
       .select('*')
       .eq('chat_id', id)
       .order('created_at', { ascending: true })
+      .limit(20)
 
     setMessages(msgs || [])
   }
@@ -76,21 +84,46 @@ export default function ChatPage() {
   const createNewChat = async () => {
     if (!userId) return
 
-    const { data } = await supabase
+    const promptText = prompt('Для чого цей чат? (system prompt)')
+    if (!promptText) return
+
+    const { data, error } = await supabase
       .from('chats')
-      .insert([{ user_id: userId, title: 'Новий чат' }])
+      .insert([
+        {
+          user_id: userId,
+          title: promptText,
+          system_prompt: promptText,
+        },
+      ])
       .select()
       .single()
 
-    if (data) {
-      setChats([data, ...chats])
-      setChatId(data.id)
-      setMessages([])
+    if (error) {
+      console.error(error)
+      return
     }
+
+    const { data: chatsData } = await supabase
+      .from('chats')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+
+    setChats(chatsData || [])
+
+    setChatId(data.id)
+    setMessages([])
   }
 
+  // 🔥 ОНОВЛЕНА ФУНКЦІЯ
   async function sendMessage() {
-    if (!message) return
+    console.log('DATA:', { message, userId, chatId })
+
+    if (!message || !userId || !chatId) {
+      console.log('❌ Missing data')
+      return
+    }
 
     setLoading(true)
 
@@ -101,6 +134,12 @@ export default function ChatPage() {
 
     setMessages(newMessages)
     setMessage('')
+
+    // 🔥 "бот друкує"
+    setMessages([
+      ...newMessages,
+      { role: 'assistant', content: '...друкує' },
+    ])
 
     try {
       const res = await fetch('/api/chat', {
@@ -136,7 +175,6 @@ export default function ChatPage() {
   return (
     <div style={{ display: 'flex', height: '100vh' }}>
       
-      {/* 🔥 ЛІВА ПАНЕЛЬ */}
       <div style={{ width: 220, borderRight: '1px solid gray', padding: 10 }}>
         <button onClick={createNewChat}>
           + Новий чат
@@ -159,7 +197,6 @@ export default function ChatPage() {
         ))}
       </div>
 
-      {/* 🔥 ПРАВА ЧАСТИНА */}
       <div style={{ flex: 1, padding: 20, display: 'flex', flexDirection: 'column' }}>
         <h1>AI Chat 🤖</h1>
 
@@ -199,7 +236,8 @@ export default function ChatPage() {
           placeholder="Напиши щось..."
         />
 
-        <button onClick={sendMessage} disabled={loading}>
+        {/* 🔥 ВАЖЛИВО */}
+        <button onClick={sendMessage} disabled={loading || !chatId}>
           {loading ? 'Sending...' : 'Send'}
         </button>
       </div>
