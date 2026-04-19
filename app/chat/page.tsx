@@ -13,8 +13,9 @@ export default function ChatPage() {
 
   const bottomRef = useRef<HTMLDivElement | null>(null)
 
+  // 🔥 INIT
   useEffect(() => {
-    const getData = async () => {
+    const init = async () => {
       const { data } = await supabase.auth.getUser()
       const uid = data.user?.id ?? null
 
@@ -27,12 +28,11 @@ export default function ChatPage() {
         .eq('user_id', uid)
         .order('created_at', { ascending: false })
 
-      setChats(chatsData || [])
-
       let currentChatId = chatsData?.[0]?.id
 
+      // 🔥 якщо нема — створюємо чат З ПЕРЕВІРКОЮ
       if (!currentChatId) {
-        const { data: newChat } = await supabase
+        const { data: newChat, error } = await supabase
           .from('chats')
           .insert([
             {
@@ -44,30 +44,48 @@ export default function ChatPage() {
           .select()
           .single()
 
-        currentChatId = newChat?.id
+        console.log('NEW CHAT:', newChat)
+        console.log('ERROR:', error)
+
+        if (error || !newChat) {
+          alert('❌ Не вдалося створити чат (перевір Supabase)')
+          return
+        }
+
+        currentChatId = newChat.id
       }
+
+      console.log('✅ CHAT READY:', currentChatId)
 
       setChatId(currentChatId)
 
-      if (currentChatId) {
-        const { data: msgs } = await supabase
-          .from('messages')
-          .select('*')
-          .eq('chat_id', currentChatId)
-          .order('created_at', { ascending: true })
-          .limit(20)
+      // оновлюємо список чатів
+      const { data: updatedChats } = await supabase
+        .from('chats')
+        .select('*')
+        .eq('user_id', uid)
+        .order('created_at', { ascending: false })
 
-        setMessages(msgs || [])
-      }
+      setChats(updatedChats || [])
+
+      // повідомлення
+      const { data: msgs } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('chat_id', currentChatId)
+        .order('created_at', { ascending: true })
+
+      setMessages(msgs || [])
     }
 
-    getData()
+    init()
   }, [])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // 🔥 SELECT CHAT
   const selectChat = async (id: string) => {
     setChatId(id)
 
@@ -76,15 +94,15 @@ export default function ChatPage() {
       .select('*')
       .eq('chat_id', id)
       .order('created_at', { ascending: true })
-      .limit(20)
 
     setMessages(msgs || [])
   }
 
+  // 🔥 NEW CHAT
   const createNewChat = async () => {
     if (!userId) return
 
-    const promptText = prompt('Для чого цей чат? (system prompt)')
+    const promptText = prompt('Для чого цей чат?')
     if (!promptText) return
 
     const { data, error } = await supabase
@@ -99,10 +117,16 @@ export default function ChatPage() {
       .select()
       .single()
 
-    if (error) {
+    if (error || !data) {
       console.error(error)
+      alert('❌ Не вдалося створити чат')
       return
     }
+
+    console.log('🆕 NEW CHAT:', data.id)
+
+    setChatId(data.id)
+    setMessages([])
 
     const { data: chatsData } = await supabase
       .from('chats')
@@ -111,17 +135,16 @@ export default function ChatPage() {
       .order('created_at', { ascending: false })
 
     setChats(chatsData || [])
-
-    setChatId(data.id)
-    setMessages([])
   }
 
-  // 🔥 ОНОВЛЕНА ФУНКЦІЯ
+  // 🔥 SEND
   async function sendMessage() {
     console.log('DATA:', { message, userId, chatId })
 
-    if (!message || !userId || !chatId) {
-      console.log('❌ Missing data')
+    if (!message) return
+    if (!userId) return
+    if (!chatId) {
+      alert('⏳ Чат ще створюється...')
       return
     }
 
@@ -135,18 +158,10 @@ export default function ChatPage() {
     setMessages(newMessages)
     setMessage('')
 
-    // 🔥 "бот друкує"
-    setMessages([
-      ...newMessages,
-      { role: 'assistant', content: '...друкує' },
-    ])
-
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message,
           user_id: userId,
@@ -236,7 +251,6 @@ export default function ChatPage() {
           placeholder="Напиши щось..."
         />
 
-        {/* 🔥 ВАЖЛИВО */}
         <button onClick={sendMessage} disabled={loading || !chatId}>
           {loading ? 'Sending...' : 'Send'}
         </button>
